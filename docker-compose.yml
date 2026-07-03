@@ -1,20 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15
-    container_name: yt_summarizer_db
-    environment:
-      POSTGRES_USER: yt_user
-      POSTGRES_PASSWORD: yt_password
-      POSTGRES_DB: yt_summarizer_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    restart: unless-stopped
-
   # Redis
   redis:
     image: redis:7
@@ -24,16 +10,16 @@ services:
     restart: unless-stopped
 
   # RabbitMQ
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: yt_summarizer_queue
-    environment:
-      RABBITMQ_DEFAULT_USER: rmq_user
-      RABBITMQ_DEFAULT_PASS: rmq_password
-    ports:
-      - "5672:5672"   # Standard AMQP protocol port
-      - "15672:15672"
-    restart: unless-stopped
+#  rabbitmq:
+#    image: rabbitmq:3-management
+#    container_name: yt_summarizer_queue
+#    environment:
+#      RABBITMQ_DEFAULT_USER: rmq_user
+#      RABBITMQ_DEFAULT_PASS: rmq_password
+#    ports:
+#      - "5672:5672"   # Standard AMQP protocol port
+#      - "15672:15672"
+#    restart: unless-stopped
 
 volumes:
   pgdata:
