@@ -5,20 +5,25 @@ import com.anindo.videosegment.entity.Video;
 import com.anindo.videosegment.entity.VideoSegment;
 import com.anindo.videosegment.repository.VideoRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Optional;
 
+@Component
 public class VideoProcessingWorker {
 
     private VideoRepository videoRepository;
     private RedisTemplate<String,Object> redisTemplate;
 
+    @Autowired
     VideoProcessingWorker(VideoRepository videoRepository, RedisTemplate<String,Object> redisTemplate){
         this.videoRepository = videoRepository;
         this.redisTemplate = redisTemplate;
     }
+
 
     // Once a videoID enters queue, this method wakes up and starts executing in background
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
