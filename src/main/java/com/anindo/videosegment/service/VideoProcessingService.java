@@ -4,7 +4,6 @@ import com.anindo.videosegment.config.RabbitMQConfig;
 import com.anindo.videosegment.dto.VideoSubmissionResponse;
 import com.anindo.videosegment.entity.Video;
 import com.anindo.videosegment.repository.VideoRepository;
-import com.anindo.videosegment.worker.VideoProcessingWorker;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -18,10 +17,10 @@ public class VideoProcessingService {
 
     private VideoRepository videoRepository;
     private RabbitTemplate rabbitTemplate;
-    private RedisTemplate<String,Video> redisTemplate;
+    private RedisTemplate<String,Object> redisTemplate;
 
     @Autowired
-    VideoProcessingService(VideoRepository videoRepository, RabbitTemplate rabitTemplate, RedisTemplate<String,Video> redisTemplate){
+    VideoProcessingService(VideoRepository videoRepository, RabbitTemplate rabitTemplate, RedisTemplate<String,Object> redisTemplate){
         this.videoRepository = videoRepository;
         this.rabbitTemplate = rabitTemplate;
         this.redisTemplate = redisTemplate;
