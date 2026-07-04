@@ -2,11 +2,13 @@ package com.anindo.videosegment.service;
 
 import com.anindo.videosegment.dto.VideoSubmissionResponse;
 import com.anindo.videosegment.entity.Video;
+import com.anindo.videosegment.entity.VideoSegment;
 import com.anindo.videosegment.repository.VideoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -92,12 +94,29 @@ public class VideoProcessingService {
         // Send to gemini LLM
         try{
             String response = geminiService.callGeminiAPI(transcript);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(response);
+            JsonNode segmentsNode = rootNode.path("videoSegments");
+
+            if(segmentsNode.isArray()){
+                for(JsonNode node : segmentsNode){
+                    VideoSegment videoSegment = new VideoSegment();
+                    videoSegment.setTopic(node.path("topic").asText());
+                    videoSegment.setSummary(node.path("summary").asText());
+                    videoSegment.setStartTimeSeconds(node.path("startTimeSeconds").asDouble());
+                    videoSegment.setEndTimeSeconds(node.path("endTimeSeconds").asDouble());
+                    // Create many-to-one relationship
+                    videoSegment.setVideo(newVideo);
+                    newVideo.getSegments().add(videoSegment);
+                }
+            }
             newVideo.setStatus("COMPLETED");
-            newVideo.setSegments(response.);
             System.out.println(response);
-//            return new VideoSubmissionResponse(newVideo.getVideoID(), newVideo.getStatus(), "Completed analysis");
+//          return new VideoSubmissionResponse(newVideo.getVideoID(), newVideo.getStatus(), "Completed analysis");
         }
         catch(Exception e){
+            e.printStackTrace();
             markAsFailed(newVideo);
             throw new RuntimeException("Cannot process the video");
         }
