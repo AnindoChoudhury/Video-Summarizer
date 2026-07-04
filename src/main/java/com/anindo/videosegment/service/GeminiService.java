@@ -19,11 +19,15 @@ public class GeminiService {
         this.client = Client.builder().apiKey(apiKey).build();
     }
 
-    public String callGeminiAPI(String videoId) {
+    public String callGeminiAPI(String transcript) {
 
-        String prompt = "Create logical video chapters/segments for a YouTube video with ID: " + videoId +
-                ". Respond ONLY with a valid JSON array of objects. Do not use markdown blocks. Summarise each segment." +
-                "Each object must have these exact keys: 'title', 'summary', 'startTimeSeconds' (int), 'endTimeSeconds' (int).";
+        String prompt = "Create logical video chapters/segments for a YouTube video with transcript: " + transcript +
+                ". Respond ONLY with a valid JSON array of objects. " +
+                "Do not use markdown blocks. Intelligently divide the video into " +
+                "major thematic segments only where the topic shifts significantly." +
+                "Avoid creating tiny, fragmented segments; focus on substantial 'learning blocks'." +
+                "Each object must have these exact keys: 'title', 'summary', 'startTimeSeconds' (Double), 'endTimeSeconds' (Double). " +
+                "Do not enclose startTimeSeconds and endTimeSeconds in quotes";
 
         Schema responseSchema = Schema.builder()
                 .type(Type.Known.OBJECT)

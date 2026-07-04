@@ -16,12 +16,14 @@ public class VideoProcessingService {
     private VideoRepository videoRepository;
     private RedisTemplate<String,Object> redisTemplate;
     private GeminiService geminiService;
+    private YouTubeTranscriptService youTubeTranscriptService;
 
     @Autowired
-    VideoProcessingService(VideoRepository videoRepository, RedisTemplate<String,Object> redisTemplate, GeminiService geminiService){
+    VideoProcessingService(VideoRepository videoRepository, RedisTemplate<String,Object> redisTemplate, GeminiService geminiService, YouTubeTranscriptService youTubeTranscriptService){
         this.videoRepository = videoRepository;
         this.redisTemplate = redisTemplate;
         this.geminiService = geminiService;
+        this.youTubeTranscriptService = youTubeTranscriptService;
     }
 
     private String extractVideoIdFromUrl(String url) {
@@ -59,7 +61,6 @@ public class VideoProcessingService {
     public void markAsFailed(Video video) throws RuntimeException{
         video.setStatus("FAILED");
         videoRepository.save(video);
-        throw new RuntimeException("Cannot process the video");
     }
 
 
@@ -67,6 +68,10 @@ public class VideoProcessingService {
         String videoID = extractVideoIdFromUrl(url);
         String redisKey = "video:"+videoID;
         Video cachedVideo = (Video) redisTemplate.opsForValue().get(redisKey);
+
+
+        String transcript = youTubeTranscriptService.getTranscript(videoID);
+
         if(cachedVideo != null){
             return new VideoSubmissionResponse(videoID,cachedVideo.getStatus(), "Video found in cache");
         }
@@ -86,13 +91,15 @@ public class VideoProcessingService {
 
         // Send to gemini LLM
         try{
-            String response = geminiService.callGeminiAPI(videoID);
+            String response = geminiService.callGeminiAPI(transcript);
             newVideo.setStatus("COMPLETED");
+            newVideo.setSegments(response.);
             System.out.println(response);
 //            return new VideoSubmissionResponse(newVideo.getVideoID(), newVideo.getStatus(), "Completed analysis");
         }
         catch(Exception e){
             markAsFailed(newVideo);
+            throw new RuntimeException("Cannot process the video");
         }
 
         videoRepository.save(newVideo);
@@ -103,6 +110,7 @@ public class VideoProcessingService {
         // (Post office name, address, Message we want to send)
 //        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,RabbitMQConfig.ROUTING_KEY,videoID);
 
-        return new VideoSubmissionResponse(videoID, newVideo.getStatus(), "Your video is being processed");
+        String message = (newVideo.getStatus().equals("COMPLETED") ? "Video analysis complete" : "Your video is being processed");
+        return new VideoSubmissionResponse(videoID, newVideo.getStatus(), message);
     }
 }

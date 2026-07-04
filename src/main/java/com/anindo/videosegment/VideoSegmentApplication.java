@@ -2,6 +2,8 @@ package com.anindo.videosegment;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.client.RestTemplate;
 
 @SpringBootApplication
 public class VideoSegmentApplication {
@@ -10,4 +12,8 @@ public class VideoSegmentApplication {
         SpringApplication.run(VideoSegmentApplication.class, args);
     }
 
+    @Bean
+    public RestTemplate restTemplate(){
+        return new RestTemplate();
+    }
 }

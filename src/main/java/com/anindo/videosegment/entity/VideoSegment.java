@@ -12,17 +12,17 @@ public class VideoSegment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "title", nullable = false)
-    private String title;
+    @Column(name = "topic", nullable = false)
+    private String topic;
 
     @Column(name = "summary", length = 1000)
     private String summary;
 
     @Column(name = "start_time_seconds", nullable = false)
-    private Integer startTimeSeconds;
+    private Double startTimeSeconds;
 
     @Column(name = "end_time_seconds", nullable = false)
-    private Integer endTimeSeconds;
+    private Double endTimeSeconds;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "video_id", nullable = false)
