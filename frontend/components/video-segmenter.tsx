@@ -26,37 +26,6 @@ interface VideoData {
 
 type AppState = 'idle' | 'loading' | 'loaded'
 
-const MOCK_DATA: VideoData = {
-  videoID: 'aBxjDBC4M1U',
-  status: 'COMPLETED',
-  videoSegments: [
-    {
-      id: 12,
-      topic: 'Introduction and Brute Force vs Disjoint Set',
-      summary:
-        'Learn why the disjoint set data structure is used, how it optimizes component connectivity queries to constant time compared to the linear time complexity of DFS/BFS, and its importance in dynamic graphs.',
-      startTimeSeconds: 3.0,
-      endTimeSeconds: 192.0,
-    },
-    {
-      id: 13,
-      topic: 'Union by Rank: Initialization and Pseudocode',
-      summary:
-        'Explore how to implement Union by Rank using Rank and Parent arrays, including the step-by-step pseudocode for combining components.',
-      startTimeSeconds: 192.0,
-      endTimeSeconds: 481.0,
-    },
-    {
-      id: 14,
-      topic: 'Dry Run of Union by Rank',
-      summary:
-        'Walk through a detailed dry run of Union by Rank with an example graph, observing how ranks and parent pointers are updated.',
-      startTimeSeconds: 481.0,
-      endTimeSeconds: 790.0,
-    },
-  ],
-}
-
 export function VideoSegmenter() {
   const [url, setUrl] = useState('')
   const [appState, setAppState] = useState<AppState>('idle')
@@ -65,18 +34,35 @@ export function VideoSegmenter() {
   const [urlError, setUrlError] = useState('')
   const playerRef = useRef<{ seekTo: (seconds: number, type?: string) => void } | null>(null)
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerate = useCallback(async () => {
     if (!url.trim()) {
       setUrlError('Please enter a YouTube URL.')
       return
     }
     setUrlError('')
     setAppState('loading')
-    // Simulate 3-second AI processing
-    setTimeout(() => {
-      setVideoData(MOCK_DATA)
-      setAppState('loaded')
-    }, 3000)
+    try{
+        const endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081/api/videos'}/process`;
+        const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: url }),
+              });
+
+        if (!response.ok) {
+            throw new Error(`Backend returned status ${response.status}`);
+        }
+        const data: VideoData = await response.json();
+              setVideoData(data);
+              setAppState('loaded');
+    }
+    catch (error) {
+      console.error("Error communicating with backend:", error);
+      setUrlError('Failed to generate chapters. Make sure the backend is running.');
+      setAppState('idle'); // Reset the UI so the user can try again
+    }
   }, [url])
 
   const handleSeek = useCallback((seconds: number) => {

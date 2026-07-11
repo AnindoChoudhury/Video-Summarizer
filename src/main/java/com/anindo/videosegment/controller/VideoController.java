@@ -11,18 +11,19 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/videos")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:3000")
 public class VideoController {
     @Autowired
     private VideoProcessingService videoProcessingService;
 
-    @GetMapping("/process")
+    @PostMapping("/process")
     public ResponseEntity<VideoSubmissionResponse> processVideo(@Valid @RequestBody VideoSubmissionRequest videoBody){
         try {
             VideoSubmissionResponse response = videoProcessingService.saveVideo(videoBody.getUrl());
             return new ResponseEntity<>(response, HttpStatus.OK);
         }
         catch(Exception e){
+            e.printStackTrace();
             VideoSubmissionResponse errorResponse = new VideoSubmissionResponse(null,"FAILED", e.getMessage(), null);
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }

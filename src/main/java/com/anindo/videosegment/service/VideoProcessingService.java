@@ -9,19 +9,22 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Optional;
 
 @Service
 public class VideoProcessingService {
 
     private VideoRepository videoRepository;
-    private RedisTemplate<String,Object> redisTemplate;
+    private RedisTemplate<String,Video> redisTemplate;
     private GeminiService geminiService;
     private GetTranscriptService getTranscriptService;
 
     @Autowired
-    VideoProcessingService(VideoRepository videoRepository, RedisTemplate<String,Object> redisTemplate, GeminiService geminiService, GetTranscriptService getTranscriptService){
+    VideoProcessingService(VideoRepository videoRepository, RedisTemplate<String,Video> redisTemplate, GeminiService geminiService, GetTranscriptService getTranscriptService){
         this.videoRepository = videoRepository;
         this.redisTemplate = redisTemplate;
         this.geminiService = geminiService;
@@ -65,11 +68,27 @@ public class VideoProcessingService {
         videoRepository.save(video);
     }
 
+    private Video createCacheVideo(Video video) {
 
+        Video cacheVideo = new Video();
+
+        cacheVideo.setVideoID(video.getVideoID());
+        cacheVideo.setUrl(video.getUrl());
+        cacheVideo.setStatus(video.getStatus());
+        cacheVideo.setCreatedAt(video.getCreatedAt());
+
+        cacheVideo.setSegments(
+                new ArrayList<>(video.getSegments())
+        );
+
+        return cacheVideo;
+    }
+
+    @Transactional
     public VideoSubmissionResponse saveVideo(String url) {
         String videoID = extractVideoIdFromUrl(url);
         String redisKey = "video:"+videoID;
-        Video cachedVideo = (Video) redisTemplate.opsForValue().get(redisKey);
+        Video cachedVideo =  redisTemplate.opsForValue().get(redisKey);
 
 
         if(cachedVideo != null){
@@ -80,8 +99,19 @@ public class VideoProcessingService {
 
         if(existingVideo.isPresent()){
             Video video = existingVideo.get();
-            redisTemplate.opsForValue().set(redisKey,video,Duration.ofMinutes(30));
-            return new VideoSubmissionResponse(video.getVideoID(),video.getStatus(),"Video found in DB", video.getSegments());
+
+            Video cacheVideo = createCacheVideo(video);
+
+            redisTemplate.opsForValue().set(
+                    redisKey,
+                    cacheVideo,
+                    Duration.ofMinutes(30)
+            );
+            return new VideoSubmissionResponse(
+                    video.getVideoID(),
+                    video.getStatus(),
+                    "Video found in DB",
+                    video.getSegments());
         }
 
         Video newVideo = new Video();
@@ -128,8 +158,8 @@ public class VideoProcessingService {
         videoRepository.save(newVideo);
 
         // Save the video in redis
-
-        redisTemplate.opsForValue().set(redisKey,newVideo,Duration.ofMinutes(30));
+        Video cacheVideo = createCacheVideo(newVideo);
+        redisTemplate.opsForValue().set(redisKey,cacheVideo,Duration.ofMinutes(30));
 
         // (Post office name, address, Message we want to send)
 //        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,RabbitMQConfig.ROUTING_KEY,videoID);
