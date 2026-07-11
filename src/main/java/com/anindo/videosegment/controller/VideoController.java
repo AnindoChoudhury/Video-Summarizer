@@ -16,14 +16,14 @@ public class VideoController {
     @Autowired
     private VideoProcessingService videoProcessingService;
 
-    @PostMapping("/process")
+    @GetMapping("/process")
     public ResponseEntity<VideoSubmissionResponse> processVideo(@Valid @RequestBody VideoSubmissionRequest videoBody){
         try {
             VideoSubmissionResponse response = videoProcessingService.saveVideo(videoBody.getUrl());
             return new ResponseEntity<>(response, HttpStatus.OK);
         }
         catch(Exception e){
-            VideoSubmissionResponse errorResponse = new VideoSubmissionResponse(null,"FAILED", e.getMessage());
+            VideoSubmissionResponse errorResponse = new VideoSubmissionResponse(null,"FAILED", e.getMessage(), null);
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }

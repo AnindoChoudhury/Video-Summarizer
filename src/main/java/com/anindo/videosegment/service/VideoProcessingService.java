@@ -18,14 +18,14 @@ public class VideoProcessingService {
     private VideoRepository videoRepository;
     private RedisTemplate<String,Object> redisTemplate;
     private GeminiService geminiService;
-    private YouTubeTranscriptService youTubeTranscriptService;
+    private GetTranscriptService getTranscriptService;
 
     @Autowired
-    VideoProcessingService(VideoRepository videoRepository, RedisTemplate<String,Object> redisTemplate, GeminiService geminiService, YouTubeTranscriptService youTubeTranscriptService){
+    VideoProcessingService(VideoRepository videoRepository, RedisTemplate<String,Object> redisTemplate, GeminiService geminiService, GetTranscriptService getTranscriptService){
         this.videoRepository = videoRepository;
         this.redisTemplate = redisTemplate;
         this.geminiService = geminiService;
-        this.youTubeTranscriptService = youTubeTranscriptService;
+        this.getTranscriptService = getTranscriptService;
     }
 
     private String extractVideoIdFromUrl(String url) {
@@ -72,10 +72,8 @@ public class VideoProcessingService {
         Video cachedVideo = (Video) redisTemplate.opsForValue().get(redisKey);
 
 
-        String transcript = youTubeTranscriptService.getTranscript(videoID);
-
         if(cachedVideo != null){
-            return new VideoSubmissionResponse(videoID,cachedVideo.getStatus(), "Video found in cache");
+            return new VideoSubmissionResponse(videoID,cachedVideo.getStatus(), "Video found in cache", cachedVideo.getSegments());
         }
 
         Optional<Video> existingVideo = videoRepository.findById(videoID);
@@ -83,7 +81,7 @@ public class VideoProcessingService {
         if(existingVideo.isPresent()){
             Video video = existingVideo.get();
             redisTemplate.opsForValue().set(redisKey,video,Duration.ofMinutes(30));
-            return new VideoSubmissionResponse(video.getVideoID(),video.getStatus(),"Video found in DB");
+            return new VideoSubmissionResponse(video.getVideoID(),video.getStatus(),"Video found in DB", video.getSegments());
         }
 
         Video newVideo = new Video();
@@ -91,9 +89,16 @@ public class VideoProcessingService {
         newVideo.setStatus("PROCESSING");
         newVideo.setVideoID(videoID);
 
-        // Send to gemini LLM
+//         Send to gemini LLM only when the video does not exist in DB
         try{
+            // Get transcript
+            String transcript = getTranscriptService.getTranscript(videoID);
+
             String response = geminiService.callGeminiAPI(transcript);
+
+//            System.out.println("Transcript : " + transcript);
+//
+//            System.out.println("response : " + response);
 
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode rootNode = objectMapper.readTree(response);
@@ -112,8 +117,7 @@ public class VideoProcessingService {
                 }
             }
             newVideo.setStatus("COMPLETED");
-            System.out.println(response);
-//          return new VideoSubmissionResponse(newVideo.getVideoID(), newVideo.getStatus(), "Completed analysis");
+//          return new VideoSubmissionResponse(newVideo.getVideoID(), newVideo.getStatus(), "Completed analysis", newVideo.getSegments());
         }
         catch(Exception e){
             e.printStackTrace();
@@ -124,12 +128,13 @@ public class VideoProcessingService {
         videoRepository.save(newVideo);
 
         // Save the video in redis
+
         redisTemplate.opsForValue().set(redisKey,newVideo,Duration.ofMinutes(30));
 
         // (Post office name, address, Message we want to send)
 //        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,RabbitMQConfig.ROUTING_KEY,videoID);
 
         String message = (newVideo.getStatus().equals("COMPLETED") ? "Video analysis complete" : "Your video is being processed");
-        return new VideoSubmissionResponse(videoID, newVideo.getStatus(), message);
+        return new VideoSubmissionResponse(videoID, newVideo.getStatus(), message, newVideo.getSegments());
     }
 }

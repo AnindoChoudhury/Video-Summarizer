@@ -5,6 +5,7 @@ import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.Schema;
 import com.google.genai.types.Type;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +14,13 @@ import java.util.Map;
 @Service
 public class GeminiService {
 
+    private GetTranscriptService getTranscriptService;
     private final Client client;
 
-    GeminiService(@Value("${gemini.api.key}") String apiKey){
+    @Autowired
+    GeminiService(@Value("${gemini.api.key}") String apiKey, GetTranscriptService getTranscriptService){
         this.client = Client.builder().apiKey(apiKey).build();
+        this.getTranscriptService = getTranscriptService;
     }
 
     public String callGeminiAPI(String transcript) {

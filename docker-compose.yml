@@ -1,6 +1,12 @@
 version: '3.8'
 
 services:
+
+  transcript-service:
+    build:
+      context: ./youtube-transcript-service
+      dockerfile: Dockerfile
+
   # Redis
   redis:
     image: redis:7
